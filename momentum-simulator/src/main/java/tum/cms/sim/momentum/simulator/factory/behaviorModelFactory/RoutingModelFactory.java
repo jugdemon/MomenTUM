@@ -34,6 +34,7 @@ package tum.cms.sim.momentum.simulator.factory.behaviorModelFactory;
 
 import tum.cms.sim.momentum.configuration.model.tactical.RoutingModelConfiguration;
 import tum.cms.sim.momentum.model.tactical.routing.RoutingModel;
+import tum.cms.sim.momentum.model.tactical.routing.cognitiveModel.CognitiveTactical;
 import tum.cms.sim.momentum.model.tactical.routing.dijkstraModel.DijkstraTactical;
 import tum.cms.sim.momentum.model.tactical.routing.kneidlModel.KneidTacticalModel;
 import tum.cms.sim.momentum.model.tactical.routing.noRoutingModel.NoRoutingTacticalModel;
@@ -62,6 +63,10 @@ public class RoutingModelFactory extends ModelFactory<RoutingModelConfiguration,
 			
 		case Dijkstra: 	
 			routingModel = new DijkstraTactical();
+			break;
+			
+		case Cognitive:
+			routingModel = new CognitiveTactical();
 			break;
 			
 		case UPRM:		

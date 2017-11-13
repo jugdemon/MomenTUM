@@ -48,7 +48,8 @@ public class RoutingModelConfiguration extends PropertyContainerNode {
 		NoRouting,
 		Dijkstra,
 		Kneidl,
-		UPRM
+		UPRM,
+		Cognitive
 	}
 	
 	@SuppressWarnings("rawtypes")
@@ -59,6 +60,7 @@ public class RoutingModelConfiguration extends PropertyContainerNode {
 		map.put(RoutingModelType.NoRouting.toString(), RoutingModelType.NoRouting);
 		map.put(RoutingModelType.Kneidl.toString(), RoutingModelType.Kneidl);
 		map.put(RoutingModelType.UPRM.toString(), RoutingModelType.UPRM);
+		map.put(RoutingModelType.Cognitive.toString(), RoutingModelType.Cognitive);
 		
 		return new EnumToStringConverter<>(RoutingModelType.class, map);
 	}

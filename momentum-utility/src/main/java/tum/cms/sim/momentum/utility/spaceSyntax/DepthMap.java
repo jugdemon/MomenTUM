@@ -62,7 +62,10 @@ public class DepthMap extends SpaceSyntax {
 	@XStreamAsAttribute
 	private final double maxY;
 	
-	public DepthMap(ILattice lattice, Set<CellIndex> connectedIndices) {
+	@XStreamAsAttribute
+	private final String scenarioName;
+	
+	public DepthMap(ILattice lattice, Set<CellIndex> connectedIndices, String scenarioName) {
 		
 		super(lattice, connectedIndices);
 		
@@ -71,12 +74,14 @@ public class DepthMap extends SpaceSyntax {
 
 		Double[] latticeMinMaxValues = lattice.getMinMaxValuesForIndices(connectedIndices);
 		this.minValue = latticeMinMaxValues[0];
-		this.maxValue = latticeMinMaxValues[0];
+		this.maxValue = latticeMinMaxValues[1];
 		
 		this.minX = lattice.getMinPositionBoundingBox().getXComponent();
 		this.minY = lattice.getMinPositionBoundingBox().getYComponent();
 		this.maxX = lattice.getMaxPositionBoundingBox().getXComponent();
 		this.maxY = lattice.getMaxPositionBoundingBox().getYComponent();
+		
+		this.scenarioName = scenarioName;
 	}
 	
 	public ILattice getLattice() {

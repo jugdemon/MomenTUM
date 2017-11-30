@@ -50,6 +50,10 @@ public class CsvPlaybackPedestrianExtensions implements IPedestrianExtension {
 	private Double pedestrianVelocityY = 0.0;
 	private Double pedestrianVelocityXLast = 0.0;
 	private Double pedestrianVelocityYLast = 0.0;
+	private Double pedestrianVelocityXLastSec = 0.0;
+
+
+	private Double pedestrianVelocityYLastSec = 0.0;
 	
 	public List<Double> getPerceptionDistanceSpace() {
 		return perceptionDistanceSpace;
@@ -90,7 +94,15 @@ public class CsvPlaybackPedestrianExtensions implements IPedestrianExtension {
 	public Double getPedestrianVelocityYLast() {
 		return pedestrianVelocityYLast;
 	}
+	
+	public Double getPedestrianVelocityXLastSec() {
+		return pedestrianVelocityXLastSec;
+	}
 
+	public Double getPedestrianVelocityYLastSec() {
+		return pedestrianVelocityYLastSec;
+	}
+	
 	public void updatePerceptionSpace(IOperationalPedestrian pedestrian,PerceptionalModel perception, SimulationState simulationState) {
 		
 		perceptionDistanceSpace.clear();
@@ -127,8 +139,8 @@ public class CsvPlaybackPedestrianExtensions implements IPedestrianExtension {
 				IPedestrian other = pedestrianPositions.get(iter);
 				perceptionDistanceSpace.add((pedestrianPosition.distance(pedestrianPositions.get(iter).getPosition()) 
 						- pedestrian.getBodyRadius()) * scaleDistance);
-				perceptionVelocityXSpace.add(other.getVelocity().getXComponent()  * scaleTime); //- pedestrian.getVelocity().getXComponent()) * scaleTime); 
-				perceptionVelocityYSpace.add(other.getVelocity().getYComponent()  * scaleTime); //- pedestrian.getVelocity().getYComponent()) * scaleTime);
+				perceptionVelocityXSpace.add((other.getVelocity().getXComponent() - pedestrian.getVelocity().getXComponent())  * scaleTime); // * scaleTime); 
+				perceptionVelocityYSpace.add((other.getVelocity().getYComponent() - pedestrian.getVelocity().getYComponent())  * scaleTime); // * scaleTime);
 				perceptionTypeSpace.add(other.getGroupId() == pedestrian.getGroupId() ? groupCode : pedestrianCode);
 			}
 			else {
@@ -155,6 +167,8 @@ public class CsvPlaybackPedestrianExtensions implements IPedestrianExtension {
 		
 		pedestrianVelocityX = newWalkingStat.getWalkingVelocity().getXComponent() * scaleTime;
 		pedestrianVelocityY = newWalkingStat.getWalkingVelocity().getYComponent() * scaleTime;
+		pedestrianVelocityXLastSec = pedestrianVelocityXLast;
+		pedestrianVelocityYLastSec = pedestrianVelocityYLast;
 		pedestrianVelocityXLast = pedestrian.getVelocity().getXComponent() * scaleTime;
 		pedestrianVelocityYLast = pedestrian.getVelocity().getYComponent() * scaleTime;
 	}

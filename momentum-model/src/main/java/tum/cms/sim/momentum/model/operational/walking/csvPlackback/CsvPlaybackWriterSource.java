@@ -78,6 +78,14 @@ public class CsvPlaybackWriterSource extends ModelPedestrianWriterSource<CsvPlay
 			dataText = String.format(format,currentPedestrianExtension.getPedestrianVelocityYLast());
 			break;
 			
+		case "pedestrianVelocityXLastSec":
+			dataText = String.format(format,currentPedestrianExtension.getPedestrianVelocityXLastSec());
+			break;
+			
+		case "pedestrianVelocityYLastSec":
+			dataText = String.format(format,currentPedestrianExtension.getPedestrianVelocityYLastSec());
+			break;
+			
 		case "pedestrianWalkingGoalX":
 			dataText = String.format(format,currentPedestrianExtension.getPedestrianWalkingGoalX());
 			break;

@@ -10,7 +10,7 @@
 			<!-- In case of insideAreaSeed the first vertex found inside the area will be the area's vertex. -->
 			<property name="precisionSeed" type="Double" value="0.1"/>
 			<property name="insideAreaSeed" type="Boolean" value="True"/>
-			</graphOperation>
+		</graphOperation>
 	</graphModel>
 	
 	<graphModel name="routing" id="1">

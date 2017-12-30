@@ -1,6 +1,10 @@
 package tum.cms.sim.momentum.model.tactical.routing.cognitiveModel;
 
+import java.util.HashMap;
+import java.util.concurrent.ThreadLocalRandom;
+
 import tum.cms.sim.momentum.data.agent.pedestrian.types.IPedestrianExtension;
+import tum.cms.sim.momentum.utility.geometry.Vector2D;
 import tum.cms.sim.momentum.utility.graph.Graph;
 import tum.cms.sim.momentum.utility.graph.Path;
 import tum.cms.sim.momentum.utility.graph.Vertex;
@@ -12,12 +16,16 @@ public class CognitiveExtension implements IPedestrianExtension {
 	private ShortestPathAlgorithm shortestPathAlgorithm = null;
 	private AStarEuklidWeightCalculator calculator = null;
 	private String vertexWeightName = null;
+    private HashMap<Integer, Vector2D> vertexMap = null; 
+    private double familiarity;
+    private double concentration;
 	
-	public CognitiveExtension(String weightNameEdge, String weightForPedestrian) {
+	public CognitiveExtension(String weightNameEdge, String weightForPedestrian, double familiarity) {
 		
 		this.vertexWeightName = weightNameEdge + weightForPedestrian;
 		this.calculator = new AStarEuklidWeightCalculator(weightNameEdge, weightForPedestrian);
 		this.shortestPathAlgorithm = new ShortestPathAlgorithm(this.calculator);
+		this.familiarity = familiarity;
 	}
 	
 	public void removeWeightsForPedestrian(Graph graph) {
@@ -30,5 +38,73 @@ public class CognitiveExtension implements IPedestrianExtension {
 		graph.getVertices().stream().forEach(vertex -> vertex.setWeight(this.vertexWeightName, Double.MAX_VALUE));	
 		
 		return this.shortestPathAlgorithm.calculateShortestPath(graph, start, target);
+	}
+	
+	public void UpdateCognitiveDistortion(HashMap<Integer, Vector2D> vertexMap) {
+		this.vertexMap = vertexMap;
+	}
+	
+	public double getCognitiveDistanceDistortion() {
+		if (familiarity < 1.0) {
+			double rand = ThreadLocalRandom.current().nextDouble(familiarity, 1.0);
+			return rand;
+		} else {
+			return 1.0;
+		}
+	}
+	
+	/**
+	 * @return distortion from the correct direction in radians.
+	 * 
+	 *
+	 */
+	public double getCognitiveDirectionDistortion() {
+		double[] dist = pdf();
+		double rand = ThreadLocalRandom.current().nextDouble(0.0, dist[dist.length-1]);
+		for (int i = 0; i < dist.length-1;i++) {
+			if (dist[i]< rand && dist[i+1]> rand) {
+				return 2*Math.PI*((double)i/(double)dist.length)-Math.PI;
+			}
+		}
+		return Math.PI;
+	}
+	
+	private double[] pdf() {
+		double[] uniformRep = new double[720];
+		uniformRep[0]= vonMisesDistribution(0);
+		for (int i = 1; i < uniformRep.length; i++) {
+			uniformRep[i]= vonMisesDistribution(Math.PI*((double)i/(double)uniformRep.length));
+		}
+		return uniformRep;		
+	}
+	
+	private double vonMisesDistribution(double x) {
+		return Math.exp(concentration * Math.cos(x))/(2*Math.PI*bessI0(concentration));
+	}
+
+	//Found at https://stackoverflow.com/questions/1193061/bessel-library-function-in-java
+	//Ported from https://www.astro.rug.nl/~gipsy/sub/bessel.c
+	/*------------------------------------------------------------*/
+	/* PURPOSE: Evaluate modified Bessel function In(x) and n=0.  */
+	/*------------------------------------------------------------*/
+	private double bessI0( double x )
+	{
+	   double ax,ans;
+	   double y;
+
+
+	   if ((ax=Math.abs(x)) < 3.75) {
+	      y=x/3.75;
+	      y=y*y;
+	      ans=1.0+y*(3.5156229+y*(3.0899424+y*(1.2067492
+	         +y*(0.2659732+y*(0.360768e-1+y*0.45813e-2)))));
+	   } else {
+	      y=3.75/ax;
+	      ans=(Math.exp(ax)/Math.sqrt(ax))*(0.39894228+y*(0.1328592e-1
+	         +y*(0.225319e-2+y*(-0.157565e-2+y*(0.916281e-2
+	         +y*(-0.2057706e-1+y*(0.2635537e-1+y*(-0.1647633e-1
+	         +y*0.392377e-2))))))));
+	   }
+	   return ans;
 	}
 }

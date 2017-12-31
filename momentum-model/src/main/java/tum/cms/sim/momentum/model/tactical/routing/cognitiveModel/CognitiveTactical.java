@@ -1,8 +1,14 @@
 package tum.cms.sim.momentum.model.tactical.routing.cognitiveModel;
 
+import java.io.BufferedWriter;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.concurrent.ThreadLocalRandom;
+
+import org.apache.commons.collections4.IterableMap;
 
 import tum.cms.sim.momentum.data.agent.pedestrian.state.tactical.RoutingState;
 import tum.cms.sim.momentum.data.agent.pedestrian.types.IPedestrianExtension;
@@ -21,6 +27,8 @@ public class CognitiveTactical extends RoutingModel {
 	private static String weightName = "cognitiveWeight";
 
 	private Graph visibilityGraph = null;
+	
+	private boolean once = false;
 
 	@Override
 	public void callPreProcessing(SimulationState simulationState) {
@@ -30,8 +38,7 @@ public class CognitiveTactical extends RoutingModel {
 	@Override
 	public IPedestrianExtension onPedestrianGeneration(IRichPedestrian pedestrian) {
 
-		this.updateEdgeWeights(this.visibilityGraph, CognitiveTactical.weightName, pedestrian);
-		return new CognitiveExtension(CognitiveTactical.weightName, Integer.toString(pedestrian.getId()), 1.0);
+		return new CognitiveExtension(CognitiveTactical.weightName, Integer.toString(pedestrian.getId()), 0.8, 16.0);
 
 	}
 
@@ -54,11 +61,12 @@ public class CognitiveTactical extends RoutingModel {
 
 	@Override
 	public void callPedestrianBehavior(ITacticalPedestrian pedestrian, SimulationState simulationState) {
+		updateEdgeWeights(this.visibilityGraph, CognitiveTactical.weightName, pedestrian);
 		
 		Vertex start = this.findNavigationStartPoint(pedestrian, this.perception, this.scenarioManager);
 		Vertex end = this.visibilityGraph.getGeometryVertex(pedestrian.getNextNavigationTarget().getGeometry());
 
-		CognitiveExtension router = (CognitiveExtension)pedestrian.getExtensionState(this);		
+		CognitiveExtension router = (CognitiveExtension)pedestrian.getExtensionState(this);	
 		Path route = router.route(this.visibilityGraph, start, end);
 		
 		RoutingState routingState = this.updateRouteState(this.perception, pedestrian, route);
@@ -72,62 +80,99 @@ public class CognitiveTactical extends RoutingModel {
 
 	}
 	
-	private void updateEdgeWeights(Graph graph, String edgeWeightName, IRichPedestrian pedestrian) {
+	private void updateEdgeWeights(Graph graph, String edgeWeightName, ITacticalPedestrian pedestrian) {
 
 		CognitiveExtension cogState = (CognitiveExtension)pedestrian.getExtensionState(this);	
-		
+
 		HashMap<Integer, Vector2D> vertexMap = new HashMap<Integer, Vector2D>(); 
-		Vector2D pedPos = pedestrian.getPosition();
+		HashMap<Integer, Vector2D> oldVertexMap = cogState.GetCognitiveDistortion();
+		HashMap<Integer, Vector2D> origVertexMap = new HashMap<Integer, Vector2D>(); 
 
 		Edge edge = null;
 		for(Vertex current : graph.getVertices()) {  
-			
-			Vector2D curPos = current.getGeometry().getCenter();
-			double realDist = pedPos.distance(curPos);
-			
-			double cogDistort =  cogState.getCognitiveDistanceDistortion();
-			double cogDist = (0.5 + cogDistort * 0.5) * realDist;
-			
-			
-			
-			vertexMap.put(current.getId(), curPos);
+			int id = current.getId();
+			if (!vertexMap.containsKey(id)) {
+				Vector2D newPos = generateDistortion(current.getGeometry().getCenter(),
+						pedestrian.getPosition(),
+						cogState.getCognitiveDistanceDistortion(),
+						cogState.getCognitiveDirectionDistortion());
+				
+				if (oldVertexMap != null) {
+					double percentNew = 0.2;
+					Vector2D oldPos = oldVertexMap.get(id);
+					vertexMap.put(id, newPos.multiply(percentNew).sum(oldPos.multiply(1.0-percentNew)));
+				} else {
+					vertexMap.put(id, newPos);
+				}
+				origVertexMap.put(id, current.getGeometry().getCenter());
+			}
 			 
 			for(Vertex successor : graph.getSuccessorVertices(current)) {
-				
 				if(current == successor) {
 					
 					continue;
 				}
+				int succId = successor.getId();
+				if (!vertexMap.containsKey(succId)) {
+					Vector2D newPosSuc = generateDistortion(successor.getGeometry().getCenter(),
+							pedestrian.getPosition(),
+							cogState.getCognitiveDistanceDistortion(),
+							cogState.getCognitiveDirectionDistortion());
+					
+					if (oldVertexMap != null) {
+						double percentNew = 0.2;
+						Vector2D oldPosSuc = oldVertexMap.get(succId);
+						vertexMap.put(succId, newPosSuc.multiply(percentNew).sum(oldPosSuc.multiply(1.0-percentNew)));
+					} else {
+						vertexMap.put(succId, newPosSuc);
+					}
+					origVertexMap.put(succId, successor.getGeometry().getCenter());
+				}
   
 				edge = graph.getEdge(current, successor);
-				edge.setWeight(edgeWeightName, current.euklidDistanceBetweenVertex(successor));
+				Vector2D currentDistorted = vertexMap.get(id);
+				Vector2D successorDistorted = vertexMap.get(succId);
+				edge.setWeight(edgeWeightName, currentDistorted.distance(successorDistorted));
 			}
+		}
+		cogState.UpdateCognitiveDistortion(vertexMap);
+		writeToFile(origVertexMap,vertexMap);
+	}
+	
+	private synchronized void writeToFile(HashMap<Integer, Vector2D> origVertexMap, HashMap<Integer, Vector2D>vertexMap) {
+		if (!once) {
+			java.nio.file.Path path = Paths.get("C:\\Users\\Jascha\\Documents\\ETH\\STP_Master\\Master Thesis\\momentum_data\\output\\distortedGraph.csv");
+			
+			//Use try-with-resource to get auto-closeable writer instance
+			try (BufferedWriter writer = Files.newBufferedWriter(path))
+			{
+			    for (  int key : vertexMap.keySet()) {
+			    	Vector2D oldVec = origVertexMap.get(key);
+			    	Vector2D newVec = vertexMap.get(key);
+			    	double oldX = oldVec.getXComponent();
+			    	double oldY = oldVec.getYComponent();
+			    	double newX = newVec.getXComponent();
+			    	double newY = newVec.getYComponent();
+			    	writer.write(key +","+oldX +","+oldY + "," + newX + "," + newY +"\n");
+				}
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			once = true;
 		}
 	}
 	
-	//Found at https://stackoverflow.com/questions/1193061/bessel-library-function-in-java
-	//Ported from https://www.astro.rug.nl/~gipsy/sub/bessel.c
-	/*------------------------------------------------------------*/
-	/* PURPOSE: Evaluate modified Bessel function In(x) and n=0.  */
-	/*------------------------------------------------------------*/
-	private double bessI0( double x )
-	{
-	   double ax,ans;
-	   double y;
-
-
-	   if ((ax=Math.abs(x)) < 3.75) {
-	      y=x/3.75;
-	      y=y*y;
-	      ans=1.0+y*(3.5156229+y*(3.0899424+y*(1.2067492
-	         +y*(0.2659732+y*(0.360768e-1+y*0.45813e-2)))));
-	   } else {
-	      y=3.75/ax;
-	      ans=(Math.exp(ax)/Math.sqrt(ax))*(0.39894228+y*(0.1328592e-1
-	         +y*(0.225319e-2+y*(-0.157565e-2+y*(0.916281e-2
-	         +y*(-0.2057706e-1+y*(0.2635537e-1+y*(-0.1647633e-1
-	         +y*0.392377e-2))))))));
-	   }
-	   return ans;
+	private Vector2D generateDistortion(Vector2D nodePosition, Vector2D pedestrianPosition, double distanceDistortion, double directionDistortion) {
+		if (nodePosition.equals(pedestrianPosition)) return nodePosition;
+		double realDist = pedestrianPosition.distance(nodePosition);
+		double cogDist = (0.5 + distanceDistortion * 0.5) * realDist;
+		return nodePosition.
+				subtract(pedestrianPosition).
+				rotate(directionDistortion).
+				sum(pedestrianPosition).
+				multiply(cogDist/realDist);
+			 
 	}
+	
 }

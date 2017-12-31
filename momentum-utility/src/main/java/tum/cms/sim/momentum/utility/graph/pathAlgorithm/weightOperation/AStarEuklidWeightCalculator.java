@@ -34,7 +34,9 @@ package tum.cms.sim.momentum.utility.graph.pathAlgorithm.weightOperation;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 
+import tum.cms.sim.momentum.utility.geometry.Vector2D;
 import tum.cms.sim.momentum.utility.graph.Graph;
 import tum.cms.sim.momentum.utility.graph.Vertex;
 
@@ -42,6 +44,9 @@ public class AStarEuklidWeightCalculator extends DirectWeightCalculatur {
 
 		protected String weightName = null;
 		protected String weightNameExtension = null;
+		
+		private boolean cognitive = false;
+		private HashMap<Integer, Vector2D> vertexMap = null;
 		
 		protected Comparator<Vertex> weightComparator = new Comparator<Vertex>() {
 
@@ -62,21 +67,47 @@ public class AStarEuklidWeightCalculator extends DirectWeightCalculatur {
 			this.weightName = weightName == null ? "" : weightName;
 			this.weightNameExtension = weightNameExtension == null ? "" : weightNameExtension;
 		}
+		
+		public AStarEuklidWeightCalculator(String weightName, String weightNameExtension, boolean cognitive) {
+
+			this.weightName = weightName == null ? "" : weightName;
+			this.weightNameExtension = weightNameExtension == null ? "" : weightNameExtension;
+			this.cognitive = cognitive;
+		}
+		
+		public void SetVertexDistortion(HashMap<Integer, Vector2D> vertexMap) {
+			this.vertexMap = vertexMap;
+		}
 
 		@Override
 		public double calculateWeight(Graph graph, Vertex previousVisit, Vertex target, Vertex current, Vertex successor) {
 
-			double euklidianDistance = current.euklidDistanceBetweenVertex(successor);
-		    double beelineDistance = successor.euklidDistanceBetweenVertex(target);
-		    double currentWeight = current.getWeight(this.getVertexWeightName());
-		   
-		    return currentWeight + euklidianDistance + beelineDistance;
+			if (cognitive) {
+				Vector2D curPos = vertexMap.get(current.getId());
+				Vector2D sucPos = vertexMap.get(successor.getId());
+				Vector2D tarPos = vertexMap.get(target.getId());
+				double euklidianDistance = curPos.distance(sucPos);
+			    double beelineDistance = sucPos.distance(tarPos);
+			    double currentWeight = current.getWeight(this.getVertexWeightName());
+			   
+			    return currentWeight + euklidianDistance + beelineDistance;
+			} else {
+				double euklidianDistance = current.euklidDistanceBetweenVertex(successor);
+			    double beelineDistance = successor.euklidDistanceBetweenVertex(target);
+			    double currentWeight = current.getWeight(this.getVertexWeightName());
+			   
+			    return currentWeight + euklidianDistance + beelineDistance;
+			}
 	    }
 		
 		@Override
 		public void updateWeight(Graph graph, double calculatedWeight, Vertex previousVisit, Vertex target, Vertex current, Vertex successor) {
-			
-			double euklidianDistance = current.euklidDistanceBetweenVertex(successor);
+			double euklidianDistance = 0;
+			if (cognitive) {
+				euklidianDistance += vertexMap.get(current.getId()).distance(vertexMap.get(successor.getId()));
+			} else {
+				euklidianDistance += current.euklidDistanceBetweenVertex(successor);
+			}
 		    double currentWeight = current.getWeight(this.getVertexWeightName());
 			successor.setWeight(this.getVertexWeightName(), euklidianDistance + currentWeight);
 		}

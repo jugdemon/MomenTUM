@@ -19,13 +19,18 @@ public class CognitiveExtension implements IPedestrianExtension {
     private HashMap<Integer, Vector2D> vertexMap = null; 
     private double familiarity;
     private double concentration;
+    private double[] vonMisesDist = null;
+	private double upperBound;
+	private double lowerBound;
+	private int vonMisesDistSize = 720;
 	
-	public CognitiveExtension(String weightNameEdge, String weightForPedestrian, double familiarity) {
+	public CognitiveExtension(String weightNameEdge, String weightForPedestrian, double familiarity, double concentration) {
 		
 		this.vertexWeightName = weightNameEdge + weightForPedestrian;
-		this.calculator = new AStarEuklidWeightCalculator(weightNameEdge, weightForPedestrian);
+		this.calculator = new AStarEuklidWeightCalculator(weightNameEdge, weightForPedestrian,true);
 		this.shortestPathAlgorithm = new ShortestPathAlgorithm(this.calculator);
 		this.familiarity = familiarity;
+		this.concentration = concentration;
 	}
 	
 	public void removeWeightsForPedestrian(Graph graph) {
@@ -42,6 +47,11 @@ public class CognitiveExtension implements IPedestrianExtension {
 	
 	public void UpdateCognitiveDistortion(HashMap<Integer, Vector2D> vertexMap) {
 		this.vertexMap = vertexMap;
+		this.calculator.SetVertexDistortion(vertexMap);
+	}
+	
+	public HashMap<Integer, Vector2D> GetCognitiveDistortion(){
+		return this.vertexMap;
 	}
 	
 	public double getCognitiveDistanceDistortion() {
@@ -59,21 +69,28 @@ public class CognitiveExtension implements IPedestrianExtension {
 	 *
 	 */
 	public double getCognitiveDirectionDistortion() {
-		double[] dist = pdf();
-		double rand = ThreadLocalRandom.current().nextDouble(0.0, dist[dist.length-1]);
-		for (int i = 0; i < dist.length-1;i++) {
-			if (dist[i]< rand && dist[i+1]> rand) {
-				return 2*Math.PI*((double)i/(double)dist.length)-Math.PI;
+		if (vonMisesDist == null ) {
+			vonMisesDist = cdf();
+			lowerBound = vonMisesDist[0];
+			upperBound = vonMisesDist[vonMisesDistSize-1];
+		}
+		double rand = ThreadLocalRandom.current().nextDouble(0.0, upperBound);
+		if (rand < lowerBound) {
+			return -Math.PI;
+		}
+		for (int i = 0; i < vonMisesDistSize-1;i++) {
+			if (vonMisesDist[i]< rand && vonMisesDist[i+1]> rand) {
+				return 2*Math.PI*((double)i/(double)vonMisesDistSize)-Math.PI;
 			}
 		}
 		return Math.PI;
 	}
 	
-	private double[] pdf() {
-		double[] uniformRep = new double[720];
-		uniformRep[0]= vonMisesDistribution(0);
+	private double[] cdf() {
+		double[] uniformRep = new double[vonMisesDistSize];
+		uniformRep[0]= vonMisesDistribution(-Math.PI);
 		for (int i = 1; i < uniformRep.length; i++) {
-			uniformRep[i]= vonMisesDistribution(Math.PI*((double)i/(double)uniformRep.length));
+			uniformRep[i]= uniformRep[i-1] + vonMisesDistribution(2*Math.PI*((double)i/(double)vonMisesDistSize)-Math.PI);
 		}
 		return uniformRep;		
 	}

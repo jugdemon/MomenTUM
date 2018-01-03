@@ -38,7 +38,7 @@ public class CognitiveTactical extends RoutingModel {
 	@Override
 	public IPedestrianExtension onPedestrianGeneration(IRichPedestrian pedestrian) {
 
-		return new CognitiveExtension(CognitiveTactical.weightName, Integer.toString(pedestrian.getId()), 0.8, 16.0);
+		return new CognitiveExtension(CognitiveTactical.weightName, Integer.toString(pedestrian.getId()), 0.7, 24.0);
 
 	}
 

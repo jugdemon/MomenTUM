@@ -28,7 +28,10 @@ public class CognitiveTactical extends RoutingModel {
 
 	private Graph visibilityGraph = null;
 	
-	private boolean once = false;
+	private int printID = -1;
+	private int printCounterMax = 10;
+	private int printCounter = printCounterMax;
+	private int printsCounted = 0;
 
 	@Override
 	public void callPreProcessing(SimulationState simulationState) {
@@ -37,8 +40,8 @@ public class CognitiveTactical extends RoutingModel {
 	
 	@Override
 	public IPedestrianExtension onPedestrianGeneration(IRichPedestrian pedestrian) {
-
-		return new CognitiveExtension(CognitiveTactical.weightName, Integer.toString(pedestrian.getId()), 0.7, 24.0);
+		
+		return new CognitiveExtension(CognitiveTactical.weightName, Integer.toString(pedestrian.getId()), 0.9, 30.0);
 
 	}
 
@@ -136,13 +139,20 @@ public class CognitiveTactical extends RoutingModel {
 			}
 		}
 		cogState.UpdateCognitiveDistortion(vertexMap);
-		writeToFile(origVertexMap,vertexMap);
+		if (printID == -1) trySetPrintId(pedestrian.getId());
+		if (printID == pedestrian.getId()) writeToFile(origVertexMap,vertexMap,pedestrian.getId());
 	}
 	
-	private synchronized void writeToFile(HashMap<Integer, Vector2D> origVertexMap, HashMap<Integer, Vector2D>vertexMap) {
-		if (!once) {
-			java.nio.file.Path path = Paths.get("C:\\Users\\Jascha\\Documents\\ETH\\STP_Master\\Master Thesis\\momentum_data\\output\\distortedGraph.csv");
-			
+	private synchronized void trySetPrintId(int id) {
+		if (printID == -1 && id != 1) {
+			printID = id;
+		}
+	}
+	
+	private void writeToFile(HashMap<Integer, Vector2D> origVertexMap, HashMap<Integer, Vector2D>vertexMap, int id) {
+		if (printCounter == printCounterMax) {
+			java.nio.file.Path path = Paths.get("C:\\Users\\Jascha\\Documents\\ETH\\STP_Master\\Master Thesis\\momentum_data\\output\\distortedGraph"+id+"_"+printsCounted+".csv");
+			printsCounted++;
 			//Use try-with-resource to get auto-closeable writer instance
 			try (BufferedWriter writer = Files.newBufferedWriter(path))
 			{
@@ -159,14 +169,16 @@ public class CognitiveTactical extends RoutingModel {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
-			once = true;
+			printCounter=0;
+		} else {
+			printCounter++;
 		}
 	}
 	
 	private Vector2D generateDistortion(Vector2D nodePosition, Vector2D pedestrianPosition, double distanceDistortion, double directionDistortion) {
 		if (nodePosition.equals(pedestrianPosition)) return nodePosition;
 		double realDist = pedestrianPosition.distance(nodePosition);
-		double cogDist = (0.5 + distanceDistortion * 0.5) * realDist;
+		double cogDist = Math.pow(realDist,distanceDistortion);
 		return nodePosition.
 				subtract(pedestrianPosition).
 				rotate(directionDistortion).

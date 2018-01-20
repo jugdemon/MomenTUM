@@ -139,8 +139,8 @@ public class CognitiveTactical extends RoutingModel {
 			}
 		}
 		cogState.UpdateCognitiveDistortion(vertexMap);
-		if (printID == -1) trySetPrintId(pedestrian.getId());
-		if (printID == pedestrian.getId()) writeToFile(origVertexMap,vertexMap,pedestrian.getId());
+		//if (printID == -1) trySetPrintId(pedestrian.getId());
+		//if (printID == pedestrian.getId()) writeToFile(origVertexMap,vertexMap,pedestrian.getId());
 	}
 	
 	private synchronized void trySetPrintId(int id) {
@@ -182,8 +182,8 @@ public class CognitiveTactical extends RoutingModel {
 		return nodePosition.
 				subtract(pedestrianPosition).
 				rotate(directionDistortion).
-				sum(pedestrianPosition).
-				multiply(cogDist/realDist);
+				multiply(cogDist/realDist).
+				sum(pedestrianPosition);
 			 
 	}
 	

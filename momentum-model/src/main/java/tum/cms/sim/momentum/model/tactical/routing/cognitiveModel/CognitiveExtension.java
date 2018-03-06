@@ -55,7 +55,7 @@ public class CognitiveExtension implements IPedestrianExtension {
 	}
 	
 	public double getCognitiveDistanceDistortion() {
-		return ThreadLocalRandom.current().nextDouble(0.95 - 0.2*(1-familiarity), 0.95 + 0.2*(1-familiarity));
+		return Math.pow(1.0, ThreadLocalRandom.current().nextGaussian()*0.2*(1-familiarity) + 0.95);
 	}
 	
 	/**
